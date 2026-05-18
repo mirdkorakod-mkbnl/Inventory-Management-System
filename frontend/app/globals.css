@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* บังคับให้เป็น Light Theme เสมอ (พื้นขาว ตัวหนังสือดำ) */
+:root {
+  --background: #ffffff;
+  --foreground: #171717; /* สีเทาเข้มเกือบดำ อ่านง่ายสบายตา */
+}
+
+/* ลบ @media dark mode ออก เพื่อไม่ให้ธีมวินโดวส์มาทำให้เว็บเพี้ยน */
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased; /* ทำให้ตัวหนังสือคมชัดขึ้น */
+  -moz-osx-font-smoothing: grayscale;
+}

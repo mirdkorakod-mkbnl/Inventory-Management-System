@@ -1,0 +1,433 @@
+basePath: /
+definitions:
+  handlers.ForgotPasswordInput:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+    type: object
+  handlers.LoginInput:
+    properties:
+      email:
+        example: admin@
+        type: string
+      password:
+        example: "123456"
+        type: string
+    type: object
+  handlers.RegisterInput:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      name:
+        example: John Doe
+        type: string
+      password:
+        example: "123456"
+        type: string
+    type: object
+  handlers.ResetPasswordInput:
+    properties:
+      confirm_password:
+        example: newpassword123
+        type: string
+      new_password:
+        example: newpassword123
+        type: string
+      token:
+        example: generated-token-xyz
+        type: string
+    type: object
+  models.Product:
+    type: object
+  models.User:
+    properties:
+      email:
+        description: gorm:"unique" ห้ามอีเมลซ้ำ
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        description: 'เพิ่ม Role: default เป็น ''user'''
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: ระบบจัดการสต็อกสินค้า
+  title: Inventory API
+  version: "1.0"
+paths:
+  /api/admin/products/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Import products using CSV file (Admin only)
+        CSV format example:
+
+        name,price,stock
+        Keyboard,20000,10
+        Mouse,10000,5
+        Monitor,150000,3
+      parameters:
+      - description: CSV file to import
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import products (admin)
+      tags:
+      - Products Import/Export
+  /api/admin/users:
+    get:
+      description: ดูรายชื่อผู้ใช้งานทั้งหมดในระบบ
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+      summary: ดึงรายชื่อ User ทั้งหมด (Admin Only)
+      tags:
+      - admin
+  /api/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมล
+      parameters:
+      - description: Email
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ForgotPasswordInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ขอรีเซ็ตรหัสผ่าน
+      tags:
+      - Forgot Password
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: เข้าสู่ระบบ (จะได้รับ Cookie 'jwt')
+      parameters:
+      - description: ข้อมูลเข้าสู่ระบบ
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login user
+      tags:
+      - Auth
+  /api/logout:
+    post:
+      description: ออกจากระบบ (ลบ Cookie)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout user
+      tags:
+      - Auth
+  /api/products:
+    get:
+      description: ดึงรายการสินค้า ถ้าเป็น Admin จะเห็นของทุกคน ถ้าเป็น User จะเห็นแค่ของตัวเอง
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+      summary: ดูสินค้า (Admin เห็นทั้งหมด / User เห็นแค่ของตัวเอง)
+      tags:
+      - Products
+    post:
+      consumes:
+      - application/json
+      description: สร้างสินค้าโดยส่ง JSON เข้ามา (ระบบจะผูกกับ User ที่ Login อัตโนมัติ)
+      parameters:
+      - description: ข้อมูลสินค้า
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+      summary: เพิ่มสินค้าใหม่
+      tags:
+      - Products
+  /api/products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: ลบสินค้าตาม ID (เฉพาะ Admin เท่านั้นที่ลบได้ ลบได้ทุกชิ้นไม่ว่าของใคร)
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: ลบสินค้า (Admin Only)
+      tags:
+      - Products
+    put:
+      consumes:
+      - application/json
+      description: Update product details by ID (ต้องเป็นเจ้าของเท่านั้น)
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Product Data
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Product'
+      summary: แก้ไขสินค้า
+      tags:
+      - Products
+  /api/products/export:
+    get:
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Export products
+      tags:
+      - Products Import/Export
+  /api/products/import:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: CSV file
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import products (User)
+      tags:
+      - Products Import/Export
+  /api/products/import/preview:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Preview product data from CSV / Excel file before importing (no database insert)
+
+        Supported file types:
+        - CSV (.csv)
+        - Excel (.xlsx, .xls)
+
+        Expected columns:
+        name, code, price, stock
+      parameters:
+      - description: CSV / Excel file to preview
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Preview result with total and preview rows
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Preview import products
+      tags:
+      - Products Import/Export
+  /api/products/import/template:
+    get:
+      description: |-
+        Download Excel template for importing products
+
+        Columns:
+        name | price | stock
+
+        Notes:
+        - code can be empty (auto-generated by system)
+        - ID is auto-generated by database
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: Excel template file
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Download product import template
+      tags:
+      - Products Import/Export
+  /api/register:
+    post:
+      consumes:
+      - application/json
+      description: สมัครสมาชิกใหม่
+      parameters:
+      - description: ข้อมูลสมัครสมาชิก
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - Auth
+  /api/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: ใช้ Token เพื่อตั้งรหัสผ่านใหม่
+      parameters:
+      - description: Token and New Password
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ResetPasswordInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: ตั้งรหัสผ่านใหม่
+      tags:
+      - Forgot Password
+swagger: "2.0"
